@@ -37,6 +37,15 @@ def test_new_test_endpoint():
     assert "features" in data
     assert isinstance(data["features"], list)
     assert len(data["features"]) == 4
+    
+    # 버그 수정 후 새로 추가된 필드들 테스트
+    assert "bug_introduced" in data
+    assert "error_count" in data
+    assert "error_status" in data
+    assert data["bug_introduced"] is False  # 버그가 수정됨
+    assert isinstance(data["error_count"], int)  # 정수 타입
+    assert data["error_count"] == 0  # 오류 개수 0
+    assert data["error_status"] == "resolved"  # 해결 상태
 
 
 def test_github_actions_features():
