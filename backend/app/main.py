@@ -49,5 +49,7 @@ async def test_endpoint():
             "자동 라벨링",
             "자동 리뷰어 할당",
             "자동 댓글 추가"
-        ]
+        ],
+        "bug_introduced": True,
+        "error_count": undefined_variable  # 버그: 정의되지 않은 변수
     } 
