@@ -50,6 +50,7 @@ async def test_endpoint():
             "자동 리뷰어 할당",
             "자동 댓글 추가"
         ],
-        "bug_introduced": True,
-        "error_count": undefined_variable  # 버그: 정의되지 않은 변수
+        "bug_introduced": False,  # 버그 수정됨
+        "error_count": 0,  # 수정: 의미 있는 정수 값
+        "error_status": "resolved"  # 추가: 버그 해결 상태
     } 
