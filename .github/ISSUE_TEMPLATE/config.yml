@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 문서
+    url: https://github.com/your-org/your-repo/wiki
+    about: 프로젝트 문서와 가이드를 확인하세요
+  - name: 💬 토론
+    url: https://github.com/your-org/your-repo/discussions
+    about: 일반적인 질문이나 아이디어 토론은 여기서
+  - name: 🔒 보안 이슈
+    url: https://github.com/your-org/your-repo/security/advisories/new
+    about: 보안 관련 이슈는 여기서 비공개로 보고해주세요 

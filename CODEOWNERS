@@ -1,0 +1,35 @@
+# 코드 소유자 설정
+# 이 파일의 패턴과 일치하는 파일에 대한 PR 시 자동으로 리뷰어가 할당됩니다.
+
+# 글로벌 코드 소유자 (모든 파일에 대해)
+* @team-lead
+
+# 백엔드 관련 파일
+backend/ @backend-team-lead @backend-developer
+backend/app/api/ @api-developer @backend-team-lead
+backend/app/services/ @backend-developer @service-architect
+backend/app/agents/ @ml-engineer @ai-specialist
+backend/tests/ @qa-engineer @backend-developer
+
+# 프론트엔드 관련 파일
+frontend/ @frontend-team-lead @frontend-developer
+
+# 문서 관련 파일
+docs/ @tech-writer @documentation-lead
+*.md @tech-writer
+README.md @team-lead @tech-writer
+
+# 설정 파일
+.github/ @devops-lead @team-lead
+*.yml @devops-lead
+*.yaml @devops-lead
+requirements.txt @backend-team-lead @devops-lead
+.env* @devops-lead @security-lead
+
+# 데이터베이스 관련
+*/migrations/ @database-admin @backend-team-lead
+*/models.py @database-admin @backend-developer
+
+# 보안 관련
+.github/workflows/ @devops-lead @security-lead
+*/security/ @security-lead @team-lead 

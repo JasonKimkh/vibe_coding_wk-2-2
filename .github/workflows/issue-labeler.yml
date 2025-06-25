@@ -1,0 +1,190 @@
+name: 이슈 자동 라벨링
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 제목과 내용으로 라벨 자동 추가
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const issue = context.payload.issue;
+          const title = issue.title.toLowerCase();
+          const body = issue.body ? issue.body.toLowerCase() : '';
+          const labels = [];
+          
+          // 버그 관련 키워드
+          const bugKeywords = ['bug', '버그', '오류', 'error', '에러', 'crash', '크래시', '장애', 'fail', '실패'];
+          if (bugKeywords.some(keyword => title.includes(keyword) || body.includes(keyword))) {
+            labels.push('bug');
+          }
+          
+          // 기능 요청 관련 키워드
+          const featureKeywords = ['feature', '기능', 'enhancement', '개선', 'request', '요청', 'add', '추가'];
+          if (featureKeywords.some(keyword => title.includes(keyword) || body.includes(keyword))) {
+            labels.push('feature-request');
+          }
+          
+          // 문서 관련 키워드
+          const docKeywords = ['docs', '문서', 'documentation', 'readme', 'guide', '가이드'];
+          if (docKeywords.some(keyword => title.includes(keyword) || body.includes(keyword))) {
+            labels.push('documentation');
+          }
+          
+          // 질문 관련 키워드
+          const questionKeywords = ['question', '질문', 'how', '어떻게', 'help', '도움', '문의'];
+          if (questionKeywords.some(keyword => title.includes(keyword) || body.includes(keyword))) {
+            labels.push('question');
+          }
+          
+          // 테스트 관련 키워드
+          const testKeywords = ['test', '테스트', 'testing', 'pytest', 'unit test'];
+          if (testKeywords.some(keyword => title.includes(keyword) || body.includes(keyword))) {
+            labels.push('testing');
+          }
+          
+          // 우선순위 관련 키워드
+          const urgentKeywords = ['urgent', '긴급', 'critical', '크리티컬', 'hotfix', '핫픽스'];
+          if (urgentKeywords.some(keyword => title.includes(keyword) || body.includes(keyword))) {
+            labels.push('urgent', 'priority-high');
+          }
+          
+          const highPriorityKeywords = ['high priority', '높은 우선순위', 'important', '중요'];
+          if (highPriorityKeywords.some(keyword => title.includes(keyword) || body.includes(keyword))) {
+            labels.push('priority-high');
+          }
+          
+          // 기술 스택 관련 라벨
+          const techStackMap = {
+            'backend': ['fastapi', 'python', 'api', '백엔드'],
+            'frontend': ['streamlit', 'ui', '프론트엔드', 'interface'],
+            'ai-ml': ['langgraph', 'ai', 'ml', 'agent', '에이전트', 'langchain'],
+            'database': ['db', 'database', '데이터베이스', 'sql'],
+            'devops': ['deploy', '배포', 'docker', 'ci/cd', 'github actions']
+          };
+          
+          Object.entries(techStackMap).forEach(([label, keywords]) => {
+            if (keywords.some(keyword => title.includes(keyword) || body.includes(keyword))) {
+              labels.push(label);
+            }
+          });
+          
+          // 좋은 첫 이슈 판별
+          const goodFirstIssueKeywords = ['beginner', '초보', 'easy', '쉬운', 'simple', '간단'];
+          if (goodFirstIssueKeywords.some(keyword => title.includes(keyword) || body.includes(keyword))) {
+            labels.push('good-first-issue');
+          }
+          
+          // 도움 요청
+          const helpWantedKeywords = ['help wanted', '도움 필요', 'contribution', '기여'];
+          if (helpWantedKeywords.some(keyword => title.includes(keyword) || body.includes(keyword))) {
+            labels.push('help-wanted');
+          }
+          
+          // 중복 라벨 제거
+          const uniqueLabels = [...new Set(labels)];
+          
+          // 라벨 추가
+          if (uniqueLabels.length > 0) {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: uniqueLabels
+            });
+            
+            console.log(`다음 라벨들이 추가되었습니다: ${uniqueLabels.join(', ')}`);
+          }
+
+  priority-labeler:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 이슈 내용 분석으로 우선순위 자동 설정
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const issue = context.payload.issue;
+          const title = issue.title.toLowerCase();
+          const body = issue.body ? issue.body.toLowerCase() : '';
+          
+          let priorityLabel = 'priority-medium'; // 기본값
+          
+          // 높은 우선순위 결정 요소
+          const highPriorityFactors = [
+            'production', 'prod', '운영', '서비스 장애', 'service down',
+            'critical', '크리티컬', 'urgent', '긴급', 'security', '보안',
+            'data loss', '데이터 손실', 'cannot access', '접근 불가'
+          ];
+          
+          // 낮은 우선순위 결정 요소  
+          const lowPriorityFactors = [
+            'typo', '오타', 'minor', '사소한', 'cosmetic', '외관',
+            'nice to have', '있으면 좋은', 'enhancement', '개선',
+            'future', '미래', 'someday', '언젠가'
+          ];
+          
+          if (highPriorityFactors.some(factor => title.includes(factor) || body.includes(factor))) {
+            priorityLabel = 'priority-high';
+          } else if (lowPriorityFactors.some(factor => title.includes(factor) || body.includes(factor))) {
+            priorityLabel = 'priority-low';
+          }
+          
+          // 우선순위 라벨 추가
+          await github.rest.issues.addLabels({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            labels: [priorityLabel]
+          });
+          
+          console.log(`우선순위 라벨 ${priorityLabel}이 추가되었습니다.`);
+
+  complexity-labeler:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 복잡도 분석 및 라벨링
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const issue = context.payload.issue;
+          const title = issue.title.toLowerCase();
+          const body = issue.body ? issue.body.toLowerCase() : '';
+          const bodyLength = body.length;
+          
+          let complexityLabel = 'complexity-medium'; // 기본값
+          
+          // 간단한 작업 키워드
+          const simpleKeywords = [
+            'typo', '오타', 'simple fix', '간단한 수정', 'update text', '텍스트 업데이트',
+            'add comment', '주석 추가', 'rename', '이름 변경'
+          ];
+          
+          // 복잡한 작업 키워드
+          const complexKeywords = [
+            'refactor', '리팩토링', 'architecture', '아키텍처', 'integration', '통합',
+            'algorithm', '알고리즘', 'performance', '성능', 'optimization', '최적화',
+            'migration', '마이그레이션', 'new feature', '새로운 기능'
+          ];
+          
+          if (simpleKeywords.some(keyword => title.includes(keyword) || body.includes(keyword)) || bodyLength < 200) {
+            complexityLabel = 'complexity-low';
+          } else if (complexKeywords.some(keyword => title.includes(keyword) || body.includes(keyword)) || bodyLength > 1000) {
+            complexityLabel = 'complexity-high';
+          }
+          
+          // 복잡도 라벨 추가
+          await github.rest.issues.addLabels({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            labels: [complexityLabel]
+          });
+          
+          console.log(`복잡도 라벨 ${complexityLabel}이 추가되었습니다.`); 

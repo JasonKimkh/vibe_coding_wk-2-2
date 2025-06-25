@@ -1,0 +1,80 @@
+name: 새로운 기여자 환영
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 첫 번째 기여자 확인 및 환영
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // 기여자의 과거 활동 확인
+          const { data: issues } = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            creator: context.payload.sender.login,
+            state: 'all'
+          });
+          
+          const { data: prs } = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'all'
+          });
+          
+          const userPRs = prs.filter(pr => pr.user.login === context.payload.sender.login);
+          
+          const isFirstTimeContributor = issues.length <= 1 && userPRs.length <= 1;
+          
+          if (isFirstTimeContributor) {
+            let message = '';
+            
+            if (context.eventName === 'issues') {
+              message = `## 🎉 첫 번째 이슈를 환영합니다!
+              
+안녕하세요 @${context.payload.sender.login}님! 첫 번째 이슈 등록해주셔서 감사합니다! 🙏
+
+### 📋 다음 단계
+- 이슈가 자동으로 분류되고 적절한 담당자에게 할당됩니다
+- 필요한 경우 추가 정보를 요청드릴 수 있습니다
+- 진행 상황은 이 이슈에서 계속 업데이트됩니다
+
+### 🤝 기여 방법
+프로젝트에 직접 기여하고 싶으시다면:
+- [기여 가이드](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CONTRIBUTING.md)를 확인해보세요
+- [good-first-issue](https://github.com/${context.repo.owner}/${context.repo.repo}/labels/good-first-issue) 라벨이 붙은 이슈들을 살펴보세요
+
+다시 한번 참여해주셔서 감사합니다! 🚀`;
+            } else {
+              message = `## 🎉 첫 번째 Pull Request를 환영합니다!
+              
+안녕하세요 @${context.payload.sender.login}님! 첫 번째 PR 생성해주셔서 정말 감사합니다! 🙏
+
+### 📋 리뷰 프로세스
+- 자동 테스트가 실행됩니다
+- 코드 리뷰어가 자동으로 할당됩니다
+- 리뷰 피드백을 받으실 수 있습니다
+- 모든 확인이 완료되면 병합됩니다
+
+### 💡 유용한 팁
+- [기여 가이드](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CONTRIBUTING.md)를 참고해주세요
+- PR 템플릿의 체크리스트를 확인해주세요
+- 질문이 있으시면 언제든 댓글로 남겨주세요
+
+훌륭한 기여해주셔서 감사합니다! 🚀`;
+            }
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
+          } 

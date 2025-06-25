@@ -1,0 +1,40 @@
+# 파일 경로 기반 자동 라벨링 설정
+
+# 백엔드 관련
+backend:
+  - 'backend/**/*'
+
+# 프론트엔드 관련  
+frontend:
+  - 'frontend/**/*'
+
+# 테스트 관련
+testing:
+  - 'backend/tests/**/*'
+  - '**/*test*.py'
+  - '**/*_test.py'
+
+# 문서 관련
+documentation:
+  - 'docs/**/*'
+  - '*.md'
+  - '**/*.md'
+
+# 설정 관련
+configuration:
+  - '.github/**/*'
+  - '*.yml'
+  - '*.yaml'
+  - '*.json'
+  - '.env*'
+  - 'requirements.txt'
+  - '.gitignore'
+
+# AI/ML 관련
+ai-ml:
+  - 'backend/app/agents/**/*'
+  - 'backend/app/services/**/*'
+
+# API 관련
+api:
+  - 'backend/app/api/**/*' 

@@ -1,0 +1,82 @@
+name: 이슈 자동 댓글
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  auto-comment:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 이슈에 환영 댓글 추가
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const issueTitle = context.payload.issue.title.toLowerCase();
+          const issueBody = context.payload.issue.body || '';
+          
+          let comment = `## 🙋‍♂️ 이슈 등록해주셔서 감사합니다!\n\n`;
+          
+          // 이슈 유형에 따른 맞춤 댓글
+          if (issueTitle.includes('bug') || issueTitle.includes('오류') || issueTitle.includes('에러')) {
+            comment += `🐛 **버그 리포트**로 분류되었습니다.\n\n`;
+            comment += `### 🔍 버그 해결 프로세스:\n`;
+            comment += `1. 이슈 재현 단계 확인\n`;
+            comment += `2. 환경 정보 수집\n`;
+            comment += `3. 원인 분석\n`;
+            comment += `4. 수정 및 테스트\n`;
+            comment += `5. PR 생성\n\n`;
+            comment += `### ℹ️ 추가 정보가 필요하다면:\n`;
+            comment += `- 운영체제 및 버전\n`;
+            comment += `- Python 버전\n`;
+            comment += `- 에러 로그 전체 내용\n`;
+            comment += `- 재현 가능한 최소 코드\n\n`;
+          } else if (issueTitle.includes('feat') || issueTitle.includes('기능') || issueTitle.includes('요청')) {
+            comment += `✨ **기능 요청**으로 분류되었습니다.\n\n`;
+            comment += `### 🚀 기능 개발 프로세스:\n`;
+            comment += `1. 요구사항 분석\n`;
+            comment += `2. 설계 및 계획\n`;
+            comment += `3. 개발 진행\n`;
+            comment += `4. 테스트 작성\n`;
+            comment += `5. PR 생성\n\n`;
+            comment += `### 🤔 고려사항:\n`;
+            comment += `- 기존 기능과의 호환성\n`;
+            comment += `- 성능 영향도\n`;
+            comment += `- 유지보수성\n`;
+            comment += `- 사용자 경험\n\n`;
+          } else if (issueTitle.includes('docs') || issueTitle.includes('문서')) {
+            comment += `📚 **문서 관련**으로 분류되었습니다.\n\n`;
+            comment += `### 📝 문서 업데이트 프로세스:\n`;
+            comment += `1. 내용 검토\n`;
+            comment += `2. 문서 작성/수정\n`;
+            comment += `3. 검토 및 피드백\n`;
+            comment += `4. 최종 반영\n\n`;
+          } else {
+            comment += `❓ **일반 문의**로 분류되었습니다.\n\n`;
+            comment += `### 📋 처리 프로세스:\n`;
+            comment += `1. 이슈 내용 검토\n`;
+            comment += `2. 담당자 배정\n`;
+            comment += `3. 해결 방안 제시\n`;
+            comment += `4. 피드백 반영\n\n`;
+          }
+          
+          comment += `### 🏷️ 라벨링:\n`;
+          comment += `적절한 라벨이 자동으로 추가되며, 필요시 수동으로 조정됩니다.\n\n`;
+          
+          comment += `### 👥 담당자 배정:\n`;
+          comment += `이슈 내용에 따라 적절한 담당자가 자동으로 배정됩니다.\n\n`;
+          
+          comment += `### ⏱️ 예상 처리 시간:\n`;
+          comment += `- 🔴 긴급: 24시간 이내\n`;
+          comment += `- 🟡 보통: 3-5일\n`;
+          comment += `- 🟢 낮음: 1-2주\n\n`;
+          
+          comment += `빠른 처리를 위해 자세한 정보를 제공해주세요! 감사합니다. 🙏`;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          }); 

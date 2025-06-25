@@ -1,0 +1,131 @@
+name: 이슈 자동 할당
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 라벨에 따른 자동 담당자 할당
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const issue = context.payload.issue;
+          const labels = issue.labels.map(label => label.name);
+          const title = issue.title.toLowerCase();
+          const body = issue.body ? issue.body.toLowerCase() : '';
+          
+          // 라벨별 담당자 매핑 (실제 GitHub 사용자명으로 수정 필요)
+          const assigneeMap = {
+            'bug': ['backend-developer', 'qa-engineer'],
+            'feature-request': ['product-manager', 'backend-developer'],
+            'enhancement': ['backend-developer'],
+            'documentation': ['tech-writer', 'backend-developer'],
+            'testing': ['qa-engineer'],
+            'backend': ['backend-developer'],
+            'frontend': ['frontend-developer'],
+            'ai-ml': ['ml-engineer'],
+            'api': ['backend-developer'],
+            'urgent': ['team-lead'],
+            'priority-high': ['team-lead'],
+            'good-first-issue': ['mentor']
+          };
+          
+          // 키워드별 담당자 매핑
+          const keywordMap = {
+            'langgraph': ['ml-engineer'],
+            'fastapi': ['backend-developer'],
+            'streamlit': ['frontend-developer'],
+            'test': ['qa-engineer'],
+            'deploy': ['devops-engineer'],
+            'database': ['backend-developer'],
+            'api': ['backend-developer']
+          };
+          
+          let assignees = new Set();
+          
+          // 라벨 기반 할당
+          labels.forEach(label => {
+            if (assigneeMap[label]) {
+              assigneeMap[label].forEach(assignee => assignees.add(assignee));
+            }
+          });
+          
+          // 키워드 기반 할당
+          Object.entries(keywordMap).forEach(([keyword, users]) => {
+            if (title.includes(keyword) || body.includes(keyword)) {
+              users.forEach(user => assignees.add(user));
+            }
+          });
+          
+          // 우선순위에 따른 추가 할당
+          if (labels.includes('urgent') || labels.includes('priority-high')) {
+            assignees.add('team-lead');
+          }
+          
+          // 기본 담당자 (라벨이 없거나 매칭되지 않는 경우)
+          if (assignees.size === 0) {
+            assignees.add('default-maintainer');
+          }
+          
+          // 담당자 할당 (최대 3명)
+          const finalAssignees = Array.from(assignees).slice(0, 3);
+          
+          if (finalAssignees.length > 0) {
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              assignees: finalAssignees
+            });
+            
+            console.log(`담당자로 ${finalAssignees.join(', ')}를 할당했습니다.`);
+          }
+
+  priority-assign:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 우선순위에 따른 특별 할당
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const issue = context.payload.issue;
+          const title = issue.title.toLowerCase();
+          const body = issue.body ? issue.body.toLowerCase() : '';
+          const labels = issue.labels.map(label => label.name);
+          
+          // 긴급 키워드 체크
+          const urgentKeywords = ['긴급', 'urgent', 'critical', '크리티컬', '장애', 'down', '서비스', 'production'];
+          const isUrgent = urgentKeywords.some(keyword => 
+            title.includes(keyword) || body.includes(keyword)
+          );
+          
+          if (isUrgent && !labels.includes('urgent')) {
+            // 긴급 라벨 추가
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['urgent', 'priority-high']
+            });
+            
+            // 팀 리더 및 온콜 엔지니어에게 할당
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              assignees: ['team-lead', 'on-call-engineer']
+            });
+            
+            // 긴급 알림 댓글
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚨 **긴급 이슈로 분류되었습니다!**\n\n팀 리더와 온콜 엔지니어에게 자동으로 할당되었습니다.\n24시간 이내 응답 예정입니다.`
+            });
+          } 

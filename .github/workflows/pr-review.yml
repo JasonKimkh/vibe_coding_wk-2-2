@@ -1,0 +1,84 @@
+name: PR 자동 코드 리뷰
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  auto-review:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 코드 체크아웃
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: 변경사항 분석 및 자동 리뷰 댓글
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // PR에서 변경된 파일 목록 가져오기
+          const { data: files } = await github.rest.pulls.listFiles({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          
+          let reviewComments = [];
+          let generalComments = [];
+          
+          // 파일별 자동 리뷰 체크
+          files.forEach(file => {
+            // Python 파일 체크
+            if (file.filename.endsWith('.py')) {
+              // 파일 크기 체크
+              if (file.additions > 300) {
+                generalComments.push(`⚠️ **${file.filename}**: 파일이 너무 큽니다 (${file.additions}줄 추가). 더 작은 단위로 분할을 고려해보세요.`);
+              }
+              
+              // 테스트 파일 확인
+              if (!file.filename.includes('test') && !files.some(f => f.filename.includes('test') && f.filename.includes(file.filename.replace('.py', '')))) {
+                generalComments.push(`🧪 **${file.filename}**: 관련 테스트 파일이 없는 것 같습니다. 테스트 추가를 고려해보세요.`);
+              }
+            }
+            
+            // 설정 파일 변경 체크
+            if (file.filename.includes('requirements.txt') || file.filename.includes('.env')) {
+              generalComments.push(`⚙️ **${file.filename}**: 설정 파일이 변경되었습니다. 문서 업데이트가 필요한지 확인해주세요.`);
+            }
+          });
+          
+          // 전체적인 PR 분석
+          const totalAdditions = files.reduce((sum, file) => sum + file.additions, 0);
+          const totalDeletions = files.reduce((sum, file) => sum + file.deletions, 0);
+          
+          let summary = `## 🤖 자동 코드 리뷰 요약\n\n`;
+          summary += `📊 **변경사항 통계:**\n`;
+          summary += `- 변경된 파일: ${files.length}개\n`;
+          summary += `- 추가된 줄: ${totalAdditions}줄\n`;
+          summary += `- 삭제된 줄: ${totalDeletions}줄\n\n`;
+          
+          // 권장사항 추가
+          if (generalComments.length > 0) {
+            summary += `### 📝 검토 권장사항:\n`;
+            generalComments.forEach(comment => {
+              summary += `${comment}\n`;
+            });
+            summary += `\n`;
+          }
+          
+          summary += `### ✅ 자동 체크 항목:\n`;
+          summary += `- [${totalAdditions < 500 ? 'x' : ' '}] 적절한 크기의 PR (500줄 미만)\n`;
+          summary += `- [${files.some(f => f.filename.includes('test')) ? 'x' : ' '}] 테스트 파일 포함\n`;
+          summary += `- [${files.some(f => f.filename.endsWith('.md')) ? 'x' : ' '}] 문서 업데이트 포함\n\n`;
+          
+          summary += `> 이것은 자동 생성된 리뷰입니다. 수동 리뷰도 함께 진행해주세요! 👥`;
+          
+          // 댓글 추가
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          }); 

@@ -1,0 +1,95 @@
+name: PR 자동 할당
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: PR 작성자를 제외한 팀원에게 자동 할당
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const author = context.payload.pull_request.user.login;
+          
+          // 팀 멤버 리스트 (실제 GitHub 사용자명으로 수정 필요)
+          const teamMembers = [
+            'reviewer1',
+            'reviewer2', 
+            'team-lead'
+          ];
+          
+          // PR 작성자를 제외한 리뷰어 선택
+          const availableReviewers = teamMembers.filter(member => member !== author);
+          
+          if (availableReviewers.length > 0) {
+            // 랜덤하게 1-2명 선택
+            const numReviewers = Math.min(2, availableReviewers.length);
+            const selectedReviewers = availableReviewers
+              .sort(() => 0.5 - Math.random())
+              .slice(0, numReviewers);
+            
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              reviewers: selectedReviewers
+            });
+            
+            console.log(`리뷰어로 ${selectedReviewers.join(', ')}를 할당했습니다.`);
+          }
+
+  code-owner-assign:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 변경된 파일에 따른 코드 소유자 할당
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const author = context.payload.pull_request.user.login;
+          
+          // 파일별 코드 소유자 매핑
+          const codeOwners = {
+            'backend/': ['backend-team-lead'],
+            'frontend/': ['frontend-team-lead'],
+            'docs/': ['tech-writer'],
+            '.github/': ['devops-lead'],
+            'tests/': ['qa-lead']
+          };
+          
+          // PR에서 변경된 파일 목록 가져오기
+          const { data: files } = await github.rest.pulls.listFiles({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          
+          const owners = new Set();
+          
+          // 변경된 파일 경로에 따라 코드 소유자 결정
+          files.forEach(file => {
+            Object.entries(codeOwners).forEach(([path, ownerList]) => {
+              if (file.filename.startsWith(path)) {
+                ownerList.forEach(owner => {
+                  if (owner !== author) {
+                    owners.add(owner);
+                  }
+                });
+              }
+            });
+          });
+          
+          if (owners.size > 0) {
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              reviewers: Array.from(owners)
+            });
+            
+            console.log(`코드 소유자 ${Array.from(owners).join(', ')}를 리뷰어로 할당했습니다.`);
+          } 

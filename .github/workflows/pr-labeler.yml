@@ -1,0 +1,63 @@
+name: PR 자동 라벨링
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  labeler:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 파일 변경사항으로 라벨 자동 추가
+      uses: actions/labeler@v5
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        configuration-path: .github/labeler.yml
+
+  title-labeler:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 제목으로 라벨 자동 추가
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const title = context.payload.pull_request.title.toLowerCase();
+          const labels = [];
+          
+          // 제목 키워드로 라벨 결정
+          if (title.includes('feat:') || title.includes('feature:')) {
+            labels.push('feature');
+          }
+          if (title.includes('fix:') || title.includes('bug:')) {
+            labels.push('bugfix');
+          }
+          if (title.includes('docs:') || title.includes('doc:')) {
+            labels.push('documentation');
+          }
+          if (title.includes('test:') || title.includes('testing:')) {
+            labels.push('testing');
+          }
+          if (title.includes('refactor:')) {
+            labels.push('refactor');
+          }
+          if (title.includes('chore:')) {
+            labels.push('maintenance');
+          }
+          if (title.includes('breaking:') || title.includes('breaking change')) {
+            labels.push('breaking-change');
+          }
+          if (title.includes('urgent:') || title.includes('hotfix:')) {
+            labels.push('urgent');
+          }
+          
+          // 라벨 추가
+          if (labels.length > 0) {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: labels
+            });
+          } 
